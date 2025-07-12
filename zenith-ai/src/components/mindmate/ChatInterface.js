@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, FileText, Wind, Smile, Settings2 } from 'lucide-react'; // Icons
+import { Send, Mic, FileText, Wind, Smile, Settings2 } from 'lucide-react';
+import { getChatCompletion } from '../../services/OpenRouterService';
 
-// Mock AI Avatar
+// Mock AI Avatar (no changes)
 const MindMateAvatar = () => (
   <motion.div
     className="w-16 h-16 rounded-full bg-gradient-to-br from-zenith-blue to-zenith-lavender shadow-xl flex items-center justify-center mr-4"
@@ -17,7 +18,7 @@ const MindMateAvatar = () => (
   </motion.div>
 );
 
-// Typing indicator
+// Typing indicator (no changes)
 const TypingIndicator = () => (
   <motion.div
     initial={{ opacity: 0, y: 10 }}
@@ -39,7 +40,7 @@ const TypingIndicator = () => (
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([
-    { id: 1, text: "Hello! I'm MindMate, your AI companion for reflection and growth. How are you feeling today?", sender: 'ai' }
+    { role: 'assistant', content: "Hello! I'm MindMate, your AI companion for reflection and growth. How are you feeling today?", id: 1 }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
@@ -51,23 +52,32 @@ const ChatInterface = () => {
 
   useEffect(scrollToBottom, [messages, isAiTyping]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (inputValue.trim() === '') return;
 
-    const newMessage = { id: messages.length + 1, text: inputValue, sender: 'user' };
-    setMessages(prev => [...prev, newMessage]);
+    const userMessage = { role: 'user', content: inputValue, id: Date.now() };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInputValue('');
     setIsAiTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse = { id: messages.length + 2, text: "That's interesting. Could you tell me more about that?", sender: 'ai' };
-      setMessages(prev => [...prev, aiResponse]);
-      setIsAiTyping(false);
-    }, 2000 + Math.random() * 1000);
+    // Prepare messages for the API - don't send the 'id' field
+    const apiMessages = newMessages.map(({ role, content }) => ({ role, content }));
+
+    // Add a system prompt to guide the AI
+    const systemPrompt = {
+        role: 'system',
+        content: 'You are MindMate, a friendly, empathetic, and supportive AI mental wellness companion from the Zenith AI platform. Your tone should be calming, elegant, and deeply human. Avoid sounding robotic. Your goal is to listen, ask thoughtful questions, and gently guide the user in their self-reflection. Keep your responses concise and encouraging.'
+    };
+
+    const aiResponseContent = await getChatCompletion([systemPrompt, ...apiMessages]);
+
+    const aiMessage = { role: 'assistant', content: aiResponseContent, id: Date.now() + 1 };
+    setMessages(prev => [...prev, aiMessage]);
+    setIsAiTyping(false);
   };
 
-  // Placeholder functions for additional features
+  // Placeholder functions for additional features (no changes)
   const handleQuickEmotionLog = () => alert("Quick Emotion Log feature placeholder.");
   const handleGuidedBreathing = () => alert("Guided Breathing Exercise feature placeholder.");
   const handleExportSession = () => alert("Export Session / Journal feature placeholder.");
@@ -76,7 +86,7 @@ const ChatInterface = () => {
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-zenith-blue/10 via-zenith-lavender/10 to-zenith-pink/10 p-4 md:p-6 relative">
-      {/* Header / Controls Area */}
+      {/* Header / Controls Area (no changes) */}
       <div className="absolute top-4 right-4 md:top-6 md:right-6 flex flex-col space-y-2 z-10">
         <button onClick={handleQuickEmotionLog} title="Log Today's Emotion" className="p-3 bg-white/80 backdrop-blur-sm rounded-full shadow-md hover:bg-zenith-pink/30 transition-colors">
           <Smile size={22} className="text-zenith-pink" />
@@ -92,32 +102,32 @@ const ChatInterface = () => {
         </button>
       </div>
 
-      {/* MindMate Avatar (Top-left or integrated with messages) */}
+      {/* MindMate Avatar (no changes) */}
       <div className="absolute top-4 left-4 md:top-6 md:left-6 z-10 hidden md:block">
         <MindMateAvatar />
       </div>
 
-      {/* Messages Area */}
+      {/* Messages Area - updated to use role/content */}
       <div className="flex-grow overflow-y-auto mb-4 pr-2 space-y-4 custom-scrollbar">
         <AnimatePresence>
-          {messages.map((msg, index) => (
+          {messages.map((msg) => (
             <motion.div
               key={msg.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
-              className={`flex ${msg.sender === 'ai' ? 'justify-start' : 'justify-end'}`}
+              className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}
             >
-              {msg.sender === 'ai' && <div className="md:hidden mr-2 mt-1"><MindMateAvatar/></div> /* Show avatar for mobile on AI messages */}
+              {msg.role === 'assistant' && <div className="md:hidden mr-2 mt-1"><MindMateAvatar/></div>}
               <div
                 className={`max-w-xs md:max-w-md lg:max-w-lg px-5 py-3 rounded-2xl shadow ${
-                  msg.sender === 'ai'
+                  msg.role === 'assistant'
                     ? 'bg-white text-zenith-gray-700 rounded-bl-none'
                     : 'bg-zenith-blue text-white rounded-br-none'
                 }`}
               >
-                <p className="font-body text-md">{msg.text}</p>
+                <p className="font-body text-md">{msg.content}</p>
               </div>
             </motion.div>
           ))}
@@ -131,7 +141,7 @@ const ChatInterface = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
+      {/* Input Area (no changes) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -157,7 +167,7 @@ const ChatInterface = () => {
         >
           <Send size={22} />
         </button>
-      </motion.div>
+      </motion..div>
     </div>
   );
 };

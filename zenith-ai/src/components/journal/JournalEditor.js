@@ -1,16 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Book, Edit, Plus, Save, RotateCcw, Smile } from 'lucide-react';
-
-const dailyPrompts = [
-  "What brought you joy today?",
-  "Describe a small moment of peace you experienced.",
-  "What is something you want to let go of?",
-  "Who made you smile today and why?",
-  "What are you grateful for right now?",
-  "If you could give your past self some advice, what would it be?",
-  "What challenge did you overcome today?",
-];
+import { Book, Edit, Plus, Save, RotateCcw, Smile, Zap } from 'lucide-react';
+import { generateContent } from '../../services/OpenRouterService';
 
 const moodOptions = [
   { level: 1, emoji: '😔', label: 'Awful' },
@@ -26,7 +17,8 @@ const JournalEditor = ({ onSave, existingEntry }) => {
   const [content, setContent] = useState('');
   const [mood, setMood] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState('Loading a thoughtful prompt for you...');
+  const [isFetchingPrompt, setIsFetchingPrompt] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const contentRef = useRef(null);
 
@@ -35,8 +27,9 @@ const JournalEditor = ({ onSave, existingEntry }) => {
       setTitle(existingEntry.title);
       setContent(existingEntry.content);
       setMood(existingEntry.mood);
+      setPrompt(''); // No prompt when editing
     } else {
-      // New entry: reset fields
+      // New entry: reset fields and get a new prompt
       setTitle('');
       setContent('');
       setMood(null);
@@ -49,9 +42,9 @@ const JournalEditor = ({ onSave, existingEntry }) => {
     const handler = setTimeout(() => {
       if (content) {
         setIsSaving(true);
-        setTimeout(() => setIsSaving(false), 1500); // Show "Saving..." for 1.5s
+        setTimeout(() => setIsSaving(false), 1500);
       }
-    }, 2000); // Trigger auto-save 2s after user stops typing
+    }, 2000);
 
     // Word count
     setWordCount(content.trim().split(/\s+/).filter(Boolean).length);
@@ -74,9 +67,12 @@ const JournalEditor = ({ onSave, existingEntry }) => {
     onSave(entryData);
   };
 
-  const getNewPrompt = () => {
-    const newPrompt = dailyPrompts[Math.floor(Math.random() * dailyPrompts.length)];
-    setPrompt(newPrompt);
+  const getNewPrompt = async () => {
+    setIsFetchingPrompt(true);
+    const aiPrompt = await generateContent("Generate a short, thought-provoking, and gentle journal prompt suitable for a mental wellness app. The prompt should encourage self-reflection.");
+    // The API might return the prompt in quotes, so we remove them.
+    setPrompt(aiPrompt.replace(/"/g, ''));
+    setIsFetchingPrompt(false);
   };
 
   const applyPrompt = () => {
@@ -103,9 +99,15 @@ const JournalEditor = ({ onSave, existingEntry }) => {
       {/* Prompt Section */}
       {!existingEntry && (
         <div className="p-3 bg-zenith-beige/50 rounded-lg mb-4 flex items-center justify-between">
-            <p className="text-sm text-zenith-gray-600 italic">Prompt: "{prompt}"</p>
-            <div>
-                <button onClick={getNewPrompt} title="New Prompt" className="p-1 text-zenith-gray-500 hover:text-zenith-blue"><RotateCcw size={16}/></button>
+            <p className="text-sm text-zenith-gray-600 italic">
+                {isFetchingPrompt ? 'Getting a new prompt...' : `"${prompt}"`}
+            </p>
+            <div className="flex items-center">
+                <button onClick={getNewPrompt} disabled={isFetchingPrompt} title="New Prompt" className="p-1 text-zenith-gray-500 hover:text-zenith-blue disabled:opacity-50">
+                    <motion.div animate={{ rotate: isFetchingPrompt ? 360 : 0 }} transition={{ duration: 1, loop: Infinity, ease: 'linear' }}>
+                        <Zap size={16}/>
+                    </motion.div>
+                </button>
                 <button onClick={applyPrompt} title="Use Prompt" className="p-1 text-zenith-gray-500 hover:text-zenith-blue"><Plus size={16}/></button>
             </div>
         </div>
@@ -121,7 +123,7 @@ const JournalEditor = ({ onSave, existingEntry }) => {
 
       <motion.div
         className="relative"
-        whileFocus={{ boxShadow: '0 0 0 2px #E6E6FA' }} // Lavender glow on focus
+        whileFocus={{ boxShadow: '0 0 0 2px #E6E6FA' }}
       >
         <textarea
           ref={contentRef}
