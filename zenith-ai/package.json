@@ -1,7 +1,7 @@
 {
   "name": "zenith-ai",
   "version": "0.1.0",
-  "homepage": "https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPOSITORY_NAME",
+  "homepage": "https://kitoduo.github.io/zenithai",
   "private": true,
   "dependencies": {
     "@fontsource/dm-sans": "^5.2.6",
